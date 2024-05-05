@@ -1,0 +1,68 @@
+version: "0.5"
+
+processes:
+  twicp:
+    working_dir: twicp
+    command: |
+      PORT=8000 nix develop -c task dev
+    readiness_probe:
+      http_get:
+        host: localhost
+        port: 8000
+      period_seconds: 1
+      failure_threshold: 30
+    shutdown:
+      signal: 2
+      timeout_seconds: 2
+
+  twipi:
+    working_dir: twipi
+    command: |
+      mkdir -p "$STATE_DIRECTORY"
+      nix develop -c task dev
+    readiness_probe:
+      http_get:
+        host: localhost
+        port: 8080
+        path: /health
+      period_seconds: 1
+      failure_threshold: 30
+    shutdown:
+      signal: 2
+      timeout_seconds: 2
+
+  twidiscord:
+    working_dir: twidiscord
+    command: |
+      mkdir -p "$STATE_DIRECTORY/twidiscord"
+      nix develop -c \
+        go run . \
+          -l ":$DISCORD_PORT" \
+          -p "$STATE_DIRECTORY/twidiscord/state.db"
+    readiness_probe:
+      http_get:
+        host: localhost
+        port: 8090
+        path: /health
+      period_seconds: 1
+      failure_threshold: 30
+    depends_on:
+      twipi:
+        condition: process_healthy
+    shutdown:
+      signal: 2
+      timeout_seconds: 2
+
+  fakesms:
+    working_dir: fakesms
+    command: |
+      PORT=8001 nix develop -c task dev
+    readiness_probe:
+      http_get:
+        host: localhost
+        port: 8001
+      period_seconds: 1
+      failure_threshold: 30
+    shutdown:
+      signal: 2
+      timeout_seconds: 2
