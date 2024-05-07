@@ -46,10 +46,7 @@
               environment = {
                 TWIPI_URL = "http://localhost:${toString twipi.port}";
               };
-              dependsOn = [
-                "twipi"
-                "twidiscord"
-              ];
+              dependsOn = [ "twipi" ];
             };
             fakesms = {
               port = basePort + 1;
@@ -60,10 +57,7 @@
                 WSBRIDGE_NUMBER_SELF = head clientPhoneNumbers;
                 WSBRIDGE_NUMBER_SERVER = head serverPhoneNumbers;
               };
-              dependsOn = [
-                "twipi"
-                "twidiscord"
-              ];
+              dependsOn = [ "twipi" ];
             };
             twipi = {
               port = basePort + 100;
@@ -100,6 +94,11 @@
                   };
                 };
               };
+              dependsOn = [
+                "twipi-generate"
+                "twidiscord"
+                # twittt
+              ];
             };
             twidiscord = {
               port = basePort + 101;
@@ -109,8 +108,16 @@
                   -p "${stateDirectory}/twidiscord/state.db"
               '';
               healthPath = "/health";
+              after = [ "twipi-generate" ];
             };
             # TODO: twittt
+
+            twipi-generate = {
+              workingDirectory = "twipi";
+              command = ''
+                task generate
+              '';
+            };
           }
         );
 
@@ -121,48 +128,52 @@
               basePort = 5000;
               inherit stateDirectory;
             };
+            mapDependsOn =
+              processes: condition:
+              builtins.listToAttrs (map (process: lib.nameValuePair process { inherit condition; }) processes);
           in
           {
             version = "0.5";
-            processes = lib.mapAttrs' (
-              name: process:
-              (lib.nameValuePair name {
-                command = ''
-                  mkdir -p "$STATE_DIRECTORY"
-                  nix develop -c ${pkgs.writeShellScript "${name}.sh" process.command}
-                '';
-                working_dir = "./${name}";
-                environment = lib.mapAttrsToList (k: v: "${k}=${v}") (
-                  (process.environment or { })
-                  // {
-                    PORT = toString process.port;
-                    STATE_DIRECTORY = stateDirectory + "/" + name;
-                  }
-                );
-                readiness_probe = {
-                  http_get = {
-                    host = "localhost";
-                    port = process.port;
-                    path = process.healthPath;
+            processes = lib.mapAttrs' (name: process: {
+              inherit name;
+              value = (
+                {
+                  command = ''
+                    mkdir -p "$STATE_DIRECTORY"
+                    nix develop -c ${pkgs.writeShellScript "${name}.sh" process.command}
+                  '';
+                  working_dir = "./" + (if (process ? "workingDirectory") then process.workingDirectory else name);
+                  environment = lib.mapAttrsToList (k: v: "${k}=${v}") (
+                    (process.environment or { })
+                    // (lib.optionalAttrs (process ? "port") { PORT = toString process.port; })
+                    // ({ STATE_DIRECTORY = stateDirectory + "/" + name; })
+                  );
+                  shutdown = {
+                    signal = 2; # SIGINT
+                    timeout_seconds = 5;
                   };
-                  period_seconds = 1;
-                  failure_threshold = 300;
-                };
-                shutdown = {
-                  signal = 2; # SIGINT
-                  timeout_seconds = 5;
-                };
-                depends_on = lib.optionalAttrs (process ? "dependsOn") (
-                  builtins.listToAttrs (
-                    map (process: lib.nameValuePair process { condition = "process_healthy"; }) process.dependsOn
-                  )
-                );
-                availability = {
-                  restart = "exit_on_failure";
-                  backoff_seconds = 2;
-                };
-              })
-            ) processesConfig;
+                  depends_on =
+                    { }
+                    // (mapDependsOn (process.after or [ ]) "process_completed_successfully")
+                    // (mapDependsOn (process.dependsOn or [ ]) "process_healthy");
+                }
+                // (lib.optionalAttrs (process ? "healthPath") {
+                  readiness_probe = {
+                    http_get = {
+                      host = "localhost";
+                      port = process.port;
+                      path = process.healthPath;
+                    };
+                    period_seconds = 1;
+                    failure_threshold = 300;
+                  };
+                  availability = {
+                    restart = "exit_on_failure";
+                    backoff_seconds = 2;
+                  };
+                })
+              );
+            }) processesConfig;
           }
         );
       in
