@@ -42,10 +42,11 @@
             twicp = {
               port = basePort;
               command = "task dev";
+              healthPath = "/";
               environment = {
                 TWIPI_URL = "http://localhost:${toString twipi.port}";
               };
-              healthPath = "/";
+              dependsOn = [ "twipi" ];
             };
             fakesms = {
               port = basePort + 1;
@@ -56,6 +57,7 @@
                 WSBRIDGE_NUMBER_SELF = head clientPhoneNumbers;
                 WSBRIDGE_NUMBER_SERVER = head serverPhoneNumbers;
               };
+              dependsOn = [ "twipi" ];
             };
             twipi = {
               port = basePort + 100;
@@ -92,6 +94,10 @@
                   };
                 };
               };
+              dependsOn = [
+                "twidiscord"
+                # "twittt"
+              ];
             };
             twidiscord = {
               port = basePort + 101;
@@ -100,7 +106,6 @@
                   -l :${toString twidiscord.port} \
                   -p "${stateDirectory}/twidiscord/state.db"
               '';
-              dependsOn = [ "twipi" ];
               healthPath = "/health";
             };
             # TODO: twittt
