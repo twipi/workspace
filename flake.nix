@@ -138,11 +138,16 @@
               inherit name;
               value = (
                 {
-                  command = ''
-                    mkdir -p "$STATE_DIRECTORY"
-                    nix develop -c ${pkgs.writeShellScript "${name}.sh" process.command}
-                  '';
-                  working_dir = "./" + (if (process ? "workingDirectory") then process.workingDirectory else name);
+                  working_dir = "./" + (process.workingDirectory or name);
+                  command =
+                    let
+                      script = pkgs.writeShellScript "${name}.sh" ''
+                        set -ex
+                        mkdir -p "$STATE_DIRECTORY"
+                        ${process.command}
+                      '';
+                    in
+                    "nix develop -c ${script}";
                   environment = lib.mapAttrsToList (k: v: "${k}=${v}") (
                     (process.environment or { })
                     // (lib.optionalAttrs (process ? "port") { PORT = toString process.port; })
