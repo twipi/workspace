@@ -1,21 +1,21 @@
 [submodule "fakesms"]
 	path = fakesms
-	url = git@github.com:twipi/fakesms.git
+	url = https://github.com/twipi/fakesms.git
 [submodule "twicp"]
 	path = twicp
-	url = ssh://git@github.com/twipi/twicp.git
+	url = https://github.com/twipi/twicp.git
 [submodule "twidiscord"]
 	path = twidiscord
-	url = git@github.com:diamondburned/twidiscord.git
+	url = https://github.com/diamondburned/twidiscord.git
 [submodule "twipi"]
 	path = twipi
-	url = git@github.com:twipi/twipi.git
+	url = https://github.com/twipi/twipi.git
 [submodule "cfgutil"]
 	path = cfgutil
-	url = git@github.com:twipi/cfgutil.git
+	url = https://github.com/twipi/cfgutil.git
 [submodule "pubsub"]
 	path = pubsub
-	url = git@github.com:twipi/pubsub.git
+	url = https://github.com/twipi/pubsub.git
 [submodule "twittt"]
 	path = twittt
 	url = https://github.com/twipi/twittt.git
