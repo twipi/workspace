@@ -20,7 +20,7 @@
     }@inputs:
     let
       lib = nixpkgs.lib;
-      twipiURL = "https://twipi.libdb.so";
+      twipiPublicHost = "twipi.libdb.so";
       serverPhoneNumbers = [ "+19876543210" ];
       clientPhoneNumbers = [ "+11234567890" ];
     in
@@ -50,7 +50,8 @@
               healthPath = "/";
               environment = {
                 HOST = if production then "0.0.0.0" else "localhost";
-                TWIPI_URL = if production then "https://${twipiURL}" else "http://localhost:${toString twipi.port}";
+                TWIPI_URL =
+                  if production then "https://${twipiPublicHost}" else "http://localhost:${toString twipi.port}";
               };
               dependsOn = [ "twipi" ];
             };
@@ -62,7 +63,7 @@
                 HOST = if production then "0.0.0.0" else "localhost";
                 WSBRIDGE_URL =
                   if production then
-                    "wss://${twipiURL}/api/fakesms/ws"
+                    "wss://${twipiPublicHost}/api/fakesms/ws"
                   else
                     "ws://localhost:${toString twipi.port}/api/fakesms/ws";
                 WSBRIDGE_NUMBER_SELF = head clientPhoneNumbers;
