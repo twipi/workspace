@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+declare -A modules
+declare -A commits
+
+while read -r module path; do
+	modules["$module"]="$path"
+	commits["$module"]="$(cd "$path" && git rev-parse HEAD)"
+done < <(go list -m -json | jq -r '.Path + " " + .Dir')
+
+for module in "${!modules[@]}"; do
+	commit="${commits[$module]}"
+	moduleDir="${modules[$module]}"
+
+	echo "For $module at ${commit:0:7}:"
+
+	for otherModule in "${!modules[@]}"; do
+		if [[ "$module" == "$otherModule" ]]; then
+			continue
+		fi
+
+		otherModuleDir="${modules[$otherModule]}"
+		otherGomod="$otherModuleDir/go.mod"
+		if [[ "$(< "$otherGomod")" != *"$module"* ]]; then
+			continue
+		fi
+
+		echo "  Syncing $otherModule..."
+		(cd "$otherModuleDir" && go get "$module@$commit")
+	done
+done
