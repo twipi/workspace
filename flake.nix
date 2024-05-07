@@ -167,7 +167,7 @@
           text = ''
             exec process-compose up \
               --config ${processComposeFile} \
-              --ref-rate 50ms \
+              --ref-rate 100ms \
               --no-server \
               --keep-tui \
               --ordered-shutdown
