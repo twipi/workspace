@@ -46,7 +46,10 @@
               environment = {
                 TWIPI_URL = "http://localhost:${toString twipi.port}";
               };
-              dependsOn = [ "twipi" ];
+              dependsOn = [
+                "twipi"
+                "twidiscord"
+              ];
             };
             fakesms = {
               port = basePort + 1;
@@ -57,7 +60,10 @@
                 WSBRIDGE_NUMBER_SELF = head clientPhoneNumbers;
                 WSBRIDGE_NUMBER_SERVER = head serverPhoneNumbers;
               };
-              dependsOn = [ "twipi" ];
+              dependsOn = [
+                "twipi"
+                "twidiscord"
+              ];
             };
             twipi = {
               port = basePort + 100;
@@ -94,10 +100,6 @@
                   };
                 };
               };
-              dependsOn = [
-                "twidiscord"
-                # "twittt"
-              ];
             };
             twidiscord = {
               port = basePort + 101;
