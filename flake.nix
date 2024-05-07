@@ -1,6 +1,4 @@
 {
-  description = "A very basic flake";
-
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
@@ -42,23 +40,17 @@
           with builtins;
           rec {
             twicp = {
-              command = "task dev";
               port = basePort;
+              command = "task dev";
               environment = {
-                TWIPI_URL = "http://localhost:${toString (basePort + 100)}";
+                TWIPI_URL = "http://localhost:${toString twipi.port}";
               };
-              healthPath = {
-                port = basePort;
-                path = "/";
-              };
+              healthPath = "/";
             };
             fakesms = {
+              port = basePort + 1;
               command = "task dev";
-              port = basePort + 80;
-              healthPath = {
-                port = basePort + 80;
-                path = "/";
-              };
+              healthPath = "/";
               environment = {
                 WSBRIDGE_URL = "ws://localhost:${toString twipi.port}/sms/ws";
                 WSBRIDGE_NUMBER_SELF = head clientPhoneNumbers;
@@ -66,8 +58,8 @@
               };
             };
             twipi = {
-              command = "task dev";
               port = basePort + 100;
+              command = "task dev";
               healthPath = "/health";
               environment = {
                 TWID_CONFIG = mkJSONConfig "twid.json" {
@@ -102,12 +94,12 @@
               };
             };
             twidiscord = {
+              port = basePort + 101;
               command = ''
                 go run . \
                   -l :${toString twidiscord.port} \
                   -p "${stateDirectory}/twidiscord/state.db"
               '';
-              port = basePort + 100;
               dependsOn = [ "twipi" ];
               healthPath = "/health";
             };
@@ -115,7 +107,7 @@
           }
         );
 
-        processComposeConfig = (
+        processComposeFile = mkJSONConfig "process-compose.json" (
           let
             stateDirectory = "/tmp/twipi";
             processesConfig = mkProcessesConfig {
@@ -129,37 +121,38 @@
               name: process:
               (lib.nameValuePair name {
                 command = ''
-                  mkdir -p ${stateDirectory}/${name}
-                  nix develop -c ${process.command}
+                  mkdir -p "$STATE_DIRECTORY"
+                  nix develop -c ${pkgs.writeShellScript "${name}.sh" process.command}
                 '';
-                workingDir = "${./.}/${name}";
-                environment = (process.environment or { }) // {
-                  STATE_DIRECTORY = stateDirectory + "/" + name;
-                };
-                readinessProbe = {
-                  httpGet = {
+                working_dir = "./${name}";
+                environment = lib.mapAttrsToList (k: v: "${k}=${v}") (
+                  (process.environment or { })
+                  // {
+                    PORT = toString process.port;
+                    STATE_DIRECTORY = stateDirectory + "/" + name;
+                  }
+                );
+                readiness_probe = {
+                  http_get = {
                     host = "localhost";
                     port = process.port;
                     path = process.healthPath;
                   };
-                  periodSeconds = 1;
-                  failureThreshold = 300;
+                  period_seconds = 1;
+                  failure_threshold = 300;
                 };
                 shutdown = {
                   signal = 2; # SIGINT
-                  timeoutSeconds = 5;
+                  timeout_seconds = 5;
                 };
-                dependsOn = lib.optionalAttrs (process ? "dependsOn") (
+                depends_on = lib.optionalAttrs (process ? "dependsOn") (
                   builtins.listToAttrs (
-                    map (process: {
-                      name = process;
-                      value.condition = "process_healthy";
-                    }) process.dependsOn
+                    map (process: lib.nameValuePair process { condition = "process_healthy"; }) process.dependsOn
                   )
                 );
                 availability = {
-                  restart = "always";
-                  backoff_seconds = 5;
+                  restart = "exit_on_failure";
+                  backoff_seconds = 2;
                 };
               })
             ) processesConfig;
@@ -172,10 +165,11 @@
           meta.mainProgram = "twipi-dev";
           runtimeInputs = [ pkgs.process-compose ];
           text = ''
-            process-compose run \
-              --config ${mkJSONConfig "process-compose.json" processComposeConfig} \
+            exec process-compose up \
+              --config ${processComposeFile} \
               --ref-rate 50ms \
               --no-server \
+              --keep-tui \
               --ordered-shutdown
           '';
         };
@@ -183,8 +177,8 @@
         devShells.default = pkgs.mkShell {
           packages = [
             self.formatter.${system}
-            self.packages.${system}.default
             pkgs.go_1_22
+            (pkgs.writeShellScriptBin "run" "nix run .?submodules=1#")
           ];
         };
 
