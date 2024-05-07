@@ -16,3 +16,6 @@
 [submodule "pubsub"]
 	path = pubsub
 	url = git@github.com:twipi/pubsub.git
+[submodule "twittt"]
+	path = twittt
+	url = https://github.com/twipi/twittt.git
