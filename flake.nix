@@ -20,6 +20,7 @@
     }@inputs:
     let
       lib = nixpkgs.lib;
+      twipiURL = "https://twipi.libdb.so";
       serverPhoneNumbers = [ "+19876543210" ];
       clientPhoneNumbers = [ "+11234567890" ];
     in
@@ -36,8 +37,8 @@
 
         mkProcessesConfig = (
           {
-            twipiURL ? null,
             basePort,
+            production ? false,
             stateDirectory,
           }:
           with lib;
@@ -48,8 +49,8 @@
               command = "task dev";
               healthPath = "/";
               environment = {
-                TWIPI_URL =
-                  if twipiURL != null then "https://${twipiURL}" else "http://localhost:${toString twipi.port}";
+                HOST = if production then "0.0.0.0" else "localhost";
+                TWIPI_URL = if production then "https://${twipiURL}" else "http://localhost:${toString twipi.port}";
               };
               dependsOn = [ "twipi" ];
             };
@@ -58,8 +59,9 @@
               command = "task dev";
               healthPath = "/";
               environment = {
+                HOST = if production then "0.0.0.0" else "localhost";
                 WSBRIDGE_URL =
-                  if twipiURL != null then
+                  if production then
                     "wss://${twipiURL}/api/fakesms/ws"
                   else
                     "ws://localhost:${toString twipi.port}/api/fakesms/ws";
@@ -215,7 +217,7 @@
       {
         packages = rec {
           dev = processCompose { };
-          prod = processCompose { twipiURL = "twipi.libdb.so"; };
+          prod = processCompose { production = true; };
         };
 
         devShells.default = pkgs.mkShell {
