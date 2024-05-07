@@ -60,9 +60,9 @@
               environment = {
                 WSBRIDGE_URL =
                   if twipiURL != null then
-                    "wss://${twipiURL}/sms/ws"
+                    "wss://${twipiURL}/api/fakesms/ws"
                   else
-                    "ws://localhost:${toString twipi.port}/sms/ws";
+                    "ws://localhost:${toString twipi.port}/api/fakesms/ws";
                 WSBRIDGE_NUMBER_SELF = head clientPhoneNumbers;
                 WSBRIDGE_NUMBER_SERVER = head serverPhoneNumbers;
               };
@@ -79,7 +79,7 @@
                     services = [
                       {
                         module = "wsbridge_server";
-                        http_path = "/sms/ws";
+                        http_path = "/api/fakesms/ws";
                         phone_numbers = serverPhoneNumbers;
                         acknowledgement_timeout = "5s";
                         message_queue = {
