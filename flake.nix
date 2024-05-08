@@ -102,14 +102,18 @@
                         name = "discord";
                         base_url = "http://localhost:${toString twidiscord.port}";
                       }
+                      {
+                        module = "http";
+                        name = "ttt";
+                        base_url = "http://localhost:${toString twittt.port}";
+                      }
                     ];
                   };
                 };
               };
               dependsOn = [
-                "twipi-generate"
                 "twidiscord"
-                # twittt
+                "twittt"
               ];
             };
             twidiscord = {
@@ -122,8 +126,12 @@
               healthPath = "/health";
               after = [ "twipi-generate" ];
             };
-            # TODO: twittt
-
+            twittt = {
+              port = basePort + 102;
+              command = "go run . -l :${toString twittt.port}";
+              healthPath = "/health";
+              after = [ "twipi-generate" ];
+            };
             twipi-generate = {
               workingDirectory = "twipi";
               command = ''
@@ -191,7 +199,7 @@
                     };
                     availability = {
                       restart = "exit_on_failure";
-                      backoff_seconds = 2;
+                      backoff_seconds = 10;
                     };
                   })
                 );
@@ -210,8 +218,7 @@
                 --config ${processComposeFile args} \
                 --ref-rate 100ms \
                 --no-server \
-                --keep-tui \
-                --ordered-shutdown
+                --keep-tui
             '';
           };
       in
