@@ -84,13 +84,14 @@
                         module = "wsbridge_server";
                         http_path = "/api/fakesms/ws";
                         phone_numbers = serverPhoneNumbers;
-                        acknowledgement_timeout = "5s";
-                        message_queue = {
-                          sqlite = {
-                            path = "${stateDirectory}/twipi/wsbridge-queue.sqlite3";
-                            max_age = "1400h";
-                          };
-                        };
+                        acknowledgement_timeout = "1s";
+                        # TODO: figure out why SQLite is shitting the bed.
+                        # message_queue = {
+                        #   sqlite = {
+                        #     path = "${stateDirectory}/twipi/wsbridge-queue.sqlite3";
+                        #     max_age = "1400h";
+                        #   };
+                        # };
                       }
                     ];
                   };
